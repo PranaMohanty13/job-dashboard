@@ -19,3 +19,37 @@ dist/
 # Database
 *.sqlite3
 *.pgsql
+
+# Keep Markdown tracked (docs/README are required in repo)
+*.md
+
+# Environment / secrets
+.env.*
+.direnv/
+.venv/
+
+# Python tooling/test artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+
+# Logs / temp files
+*.log
+*.tmp
+*.swp
+
+# Node tooling artifacts
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.parcel-cache/
+.turbo/
+.next/
+
+# OS cruft
+Thumbs.db
