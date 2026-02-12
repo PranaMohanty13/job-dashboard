@@ -25,6 +25,25 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://job_user:job_pass@db:5432/job_dashboard
+    working_dir: /app/app
+    command: >
+      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys
+          import urllib.request
+          try:
+              with urllib.request.urlopen('http://localhost:8000/api/jobs/', timeout=2) as r:
+                  sys.exit(0 if 200 <= r.status < 500 else 1)
+          except Exception:
+              sys.exit(1)
+      interval: 5s
+      timeout: 3s
+      retries: 20
     volumes:
       - ./backend:/app
 
