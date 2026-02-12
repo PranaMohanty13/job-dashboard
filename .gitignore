@@ -14,7 +14,8 @@ dist/
 
 # IDEs
 .vscode/
-.idea/
+.idea/$body = '{"name":"Timestamp Check"}'
+curl.exe -s -i -X POST http://localhost:8000/api/jobs/ -H "Content-Type: application/json" --data $body
 
 # Database
 *.sqlite3

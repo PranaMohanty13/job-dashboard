@@ -13,4 +13,4 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-CMD ["sh", "-c", "python -m django --version && sleep infinity"]
+CMD ["sh", "-c", "echo 'Backend image built. Use docker compose to run the server.' && tail -f /dev/null"]
