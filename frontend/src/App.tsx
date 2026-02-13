@@ -1,9 +1,7 @@
+import { AppRoutes } from "./app/routes";
+
 function App() {
-  return (
-    <div>
-      <h1>Job Dashboard</h1>
-    </div>
-  );
+  return <AppRoutes />;
 }
 
 export default App;

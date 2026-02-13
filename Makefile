@@ -9,7 +9,7 @@ up:
 	$(COMPOSE) up -d
 
 test:
-	$(COMPOSE) run --rm frontend npm test
+	$(COMPOSE) run --rm frontend npm run test:e2e
 
 stop:
 	$(COMPOSE) down
