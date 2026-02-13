@@ -13,68 +13,14 @@ A full-stack job management dashboard built as a take-home project for a Full-St
 
 ## Table of Contents
 
-1. [AI Usage & My Contributions](#ai-usage--my-contributions)
-2. [Getting Started](#getting-started)
+1. [Getting Started](#getting-started)
+2. [AI Usage & My Contributions](#ai-usage--my-contributions)
 3. [What's Implemented](#whats-implemented)
 4. [Architecture & Design Decisions](#architecture--design-decisions)
 5. [API Reference](#api-reference)
 6. [Testing Strategy](#testing-strategy)
 7. [Performance Considerations](#performance-considerations)
 8. [Time Spent](#time-spent)
-
----
-
-## AI Usage & My Contributions
-
-I want to be upfront about this: I used GitHub Copilot (AI-assisted tooling) throughout this project, and I'm documenting exactly how. The assignment encourages it, and I think being transparent about the division of labor says more about my engineering judgment than pretending otherwise.
-
-### My role vs. AI's role — the honest breakdown
-
-**Everything architectural was my decision.** I decided on the services/selectors/views layered pattern for the backend. I chose to denormalize `current_status_type` onto the `Job` model instead of computing it via subqueries. I picked TanStack Query for server state management. I designed the folder structure, the API contract, the testing pyramid, and the Docker topology. AI didn't make any of these calls — I did, based on my experience with what scales and what reviewers look for.
-
-**Planning and phasing were mine.** Before writing a single line of code, I collaborated with AI to create a full set of planning documents in `docs/` — requirements decomposition, backend design, frontend design, infrastructure plan, testing strategy, evaluation criteria mapping, and scalability considerations. These documents drove the entire build. AI was given these as context and told to implement against them, not to invent its own approach.
-
-**AI was my implementation accelerator.** Once I had the architecture and plan locked in, I used AI to generate the boilerplate — Django models, serializers, React components, Docker configurations. Think of it like having a very fast junior engineer who can type out what I describe, but needs me to review every line and catch the things it gets wrong.
-
-**Debugging and hardening were mostly me.** This is where the real engineering happened, and where AI's limitations showed up. Here are the specific things I caught and fixed:
-
-### What AI got wrong and how I fixed it
-
-1. **E2E test delete assertion was flaky.** AI's initial Playwright test didn't handle the browser confirmation dialog that fires on delete. The test would hang or fail intermittently. I identified that `window.confirm()` was being called and told AI to add `page.once("dialog", ...)` to accept it, plus switch from a text-content assertion to `toHaveCount(0)` on the row locator for stability.
-
-2. **Duplicate name handling had a race condition.** AI's first implementation only checked for duplicate job names at the serializer level (a database query before insert). I recognized this as a classic TOCTOU (time-of-check-time-of-use) race — two concurrent requests could both pass the check and then one would crash with a raw `IntegrityError`. I directed AI to add a `unique=True` constraint on the model, catch `IntegrityError` in the view layer, and return a clean 400 response. This is a defense-in-depth pattern: the serializer gives a friendly error message for the common case, and the database constraint + view-layer catch handles the edge case.
-
-3. **Repeated lookup logic across view methods.** Four different view methods (retrieve, partial_update, destroy, statuses) all had the same pattern: parse the pk, catch `ValueError`, look up the job, catch `DoesNotExist`. AI had copy-pasted this block four times. I flagged this as a maintainability issue and directed the refactor into a single `_get_job_or_error_response()` helper method.
-
-4. **No user-visible feedback for mutation failures.** The list page had error handling for the initial data fetch, but if a status update or delete failed silently, the user would have no idea. I designed the mutation error banner pattern and told AI where to place it and how to derive the message from `updateStatus.isError` / `deleteJob.isError`.
-
-5. **Filter and sort logic was in the wrong layer.** Views were doing query parameter parsing, validation, and queryset filtering inline. I directed the refactor to move all of that into `selectors.py` so that views remain thin HTTP transport and selectors own the read logic. This is the services/selectors pattern — writes go through services, reads go through selectors.
-
-6. **Frontend duplicate-name error was generic.** When a user tried to create a job with an existing name, they'd see "Failed to create job. Please try again." — useless. I designed the `HttpError` payload inspection in `JobForm.tsx` that checks for a 400 status with a `name` field containing "already exists," and maps it to the specific message "Duplicate name found. Please give a different name."
-
-7. **Test warnings from missing staticfiles directory.** All 38 backend tests were producing `UserWarning: No directory at: /app/app/staticfiles/` because `collectstatic` was never run in the test container. I traced this to Django's middleware initialization and fixed it by adding `RUN mkdir -p /app/app/staticfiles` in the backend Dockerfile.
-
-8. **Docker container staleness.** During development, I noticed code changes weren't reflected in running containers because I was restarting without rebuilding. This led to confusing test failures where old code was still running. I established the discipline of always using `--build` when bringing containers up during development.
-
-### My prompting approach
-
-I didn't use generic prompts like "build me a job dashboard." Instead, I:
-
-- **Fed AI my planning documents first** and told it to align every implementation step to those docs.
-- **Worked in small increments** — typically 2 file or one feature at a time, never more than 2-3 file edits per step.
-- **Required check-in format** — before every edit, AI had to state what it planned to change, why, and how to verify. After every edit, it had to report what changed and what the next step was.
-- **Used staff-level audit prompts** — I asked AI to review the codebase "as a senior staff engineer" against the evaluation criteria and identify every gap. Then I prioritized the findings and directed fixes one by one.
-- **Tightened prompts when AI overbuilt** — early on, AI would try to implement entire features end-to-end. I constrained it to smaller steps to keep changes reviewable and reversible.
-
-### Prompt refinement examples
-
-- Early: "Add backend tests." → AI wrote shallow tests that didn't cover edge cases.
-- Refined: "Write a regression test that monkeypatches `create_job` to raise `IntegrityError` and asserts the view returns a 400 with `{"name": ["A job with this name already exists."]}`." → Got exactly what I needed.
-
-- Early: "Handle errors in the frontend." → AI added a generic try-catch.
-- Refined: "Inspect the `HttpError` payload for a 400 response where `payload.name` contains 'already exists,' and map that to a specific duplicate-name message." → Got precise, user-friendly error UX.
-
-The pattern was always the same: start broad, observe what AI produces, identify what's wrong or missing, then give it a much more specific instruction. AI is excellent at typing out well-known patterns quickly. It's not great at making judgment calls about architecture, catching subtle bugs, or knowing what "good enough" looks like for a specific audience.
 
 ---
 
@@ -89,7 +35,7 @@ You only need these installed on your machine:
 - `docker compose` (v2)
 - `bash`
 
-That's it. No Python, no Node.js, no PostgreSQL — everything runs in containers.
+That's it for running the app and evaluator path. Core runtime and E2E execution are fully containerized (no local Python/PostgreSQL required).
 
 ### Quick start
 
@@ -137,6 +83,83 @@ docker compose up --build -d
 docker compose run --rm playwright
 docker compose down -v --remove-orphans
 ```
+
+---
+
+## AI Usage & My Contributions
+
+I used GitHub Copilot throughout this project with a combined workflow across Claude Opus 4.6, Codex 5.3, and Gemini 3 Pro. Claude Opus 4.6 and Codex 5.3 were primarily used for coding implementation, debugging, and code-review iterations, while Gemini 3 Pro was used mainly for consultation, planning, and architecture tradeoff discussions.
+
+I also created a set of Markdown reference files in `docs/` and a strict `AGENTS.md` operating guide so each chat model had a clearly defined role, constraints, and step-by-step execution format. That structure helped keep implementation aligned with requirements, reduced drift, and made each change reviewable.
+
+### My role vs. AI's role — the honest breakdown
+
+**Everything architectural was my decision.** I decided on the services/selectors/views layered pattern for the backend. I chose to denormalize `current_status_type` onto the `Job` model instead of computing it via subqueries. I picked TanStack Query for server state management. I designed the folder structure, the API contract, the testing pyramid, and the Docker topology. AI didn't make any of these calls — I did, based on my experience with what scales and what reviewers look for.
+
+**Planning and phasing were mine.** Before writing a single line of code, I collaborated with AI to create a full set of planning documents in `docs/` — requirements decomposition, backend design, frontend design, infrastructure plan, testing strategy, evaluation criteria mapping, and scalability considerations. These documents drove the entire build. AI was given these as context and told to implement against them, not to invent its own approach.
+
+**AI was my implementation accelerator.** Once I had the architecture and plan locked in, I used AI to generate the boilerplate — Django models, serializers, React components, Docker configurations. Think of it like having a very fast junior engineer who can type out what I describe, but needs me to review every line and catch the things it gets wrong.
+
+**Debugging and hardening were mostly me.** This is where the real engineering happened, and where AI's limitations showed up. Here are the specific things I caught and fixed:
+
+### What AI got wrong and how I fixed it
+
+1. **E2E test delete assertion was flaky.** AI's initial Playwright test didn't handle the browser confirmation dialog that fires on delete. The test would hang or fail intermittently. I identified that `window.confirm()` was being called and told AI to add `page.once("dialog", ...)` to accept it, plus switch from a text-content assertion to `toHaveCount(0)` on the row locator for stability.
+
+2. **Duplicate name handling had a race condition.** AI's first implementation only checked for duplicate job names at the serializer level (a database query before insert). I recognized this as a classic TOCTOU (time-of-check-time-of-use) race — two concurrent requests could both pass the check and then one would crash with a raw `IntegrityError`. I directed AI to add a `unique=True` constraint on the model, catch `IntegrityError` in the view layer, and return a clean 400 response. This is a defense-in-depth pattern: the serializer gives a friendly error message for the common case, and the database constraint + view-layer catch handles the edge case.
+
+3. **Repeated lookup logic across view methods.** Four different view methods (retrieve, partial_update, destroy, statuses) all had the same pattern: parse the pk, catch `ValueError`, look up the job, catch `DoesNotExist`. AI had copy-pasted this block four times. I flagged this as a maintainability issue and directed the refactor into a single `_get_job_or_error_response()` helper method.
+
+4. **No user-visible feedback for mutation failures.** The list page had error handling for the initial data fetch, but if a status update or delete failed silently, the user would have no idea. I designed the mutation error banner pattern and told AI where to place it and how to derive the message from `updateStatus.isError` / `deleteJob.isError`.
+
+5. **Filter and sort logic was in the wrong layer.** Views were doing query parameter parsing, validation, and queryset filtering inline. I directed the refactor to move all of that into `selectors.py` so that views remain thin HTTP transport and selectors own the read logic. This is the services/selectors pattern — writes go through services, reads go through selectors.
+
+6. **Frontend duplicate-name error was generic.** When a user tried to create a job with an existing name, they'd see "Failed to create job. Please try again." — useless. I designed the `HttpError` payload inspection in `JobForm.tsx` that checks for a 400 status with a `name` field containing "already exists," and maps it to the specific message "Duplicate name found. Please give a different name."
+
+7. **Test warnings from missing staticfiles directory.** All 38 backend tests were producing `UserWarning: No directory at: /app/app/staticfiles/` because `collectstatic` was never run in the test container. I traced this to Django's middleware initialization and fixed it by adding `RUN mkdir -p /app/app/staticfiles` in the backend Dockerfile.
+
+8. **Docker container staleness.** During development, I noticed code changes weren't reflected in running containers because I was restarting without rebuilding. This led to confusing test failures where old code was still running. I established the discipline of always using `--build` when bringing containers up during development.
+
+### My prompting approach
+
+I didn't use generic prompts like "build me a job dashboard." Instead, I:
+
+- **Fed AI my planning documents first** and told it to align every implementation step to those docs.
+- **Worked in small increments** — typically one or two files (or one focused feature) at a time, never more than 3-4 file edits per step.
+- **Required check-in format** — before every edit, AI had to state what it planned to change, why, and how to verify. After every edit, it had to report what changed and what the next step was.
+- **Used staff-level audit prompts** — I asked AI to review the codebase "as a senior staff engineer" against the evaluation criteria and identify every gap. Then I prioritized the findings and directed fixes one by one.
+- **Tightened prompts when AI overbuilt** — early on, AI would try to implement entire features end-to-end. I constrained it to smaller steps to keep changes reviewable and reversible.
+
+### Prompt refinement examples
+
+I treated prompting like engineering design, not chat. The process was intentionally constrained and testable:
+
+1. **Assumptions-first protocol**  
+   I required the model to explicitly state its assumptions before implementation (data shape, endpoint behavior, error shape, environment expectations). I did not ask the model to guess what was right or wrong; I asked it to surface assumptions so I could validate them.
+
+2. **Verification after each assumption set**  
+   After assumptions were listed, I ran commands and tests to verify each one (`pytest`, `vitest`, Playwright, Docker commands, API calls). If an assumption failed in execution, the next prompt was a targeted correction with updated constraints.
+
+3. **Checks-and-bounds instructions**  
+   Prompts were never vague. Each task had bounded scope, explicit acceptance criteria, and output constraints (for example: exact files to edit, exact error message to return, exact status code, exact selector behavior, exact test assertion).
+
+4. **Single-output / multi-output criteria**  
+   For small tasks, I used single-output criteria (one concrete expected result). For larger tasks, I used multiple explicit output criteria (e.g., API behavior + regression test + UI error mapping), each independently verifiable.
+
+5. **Custom instruction layer**  
+   I also used custom instructions (`AGENTS.md` + docs guidance) to define role boundaries, execution style, step size, and review protocol. This reduced drift and kept model behavior consistent across long sessions.
+
+Two concrete examples:
+
+- **Backend regression hardening**  
+  Broad prompt: “Add backend tests.”  
+  Refined prompt: “State assumptions first, then add one regression test that monkeypatches `create_job` to raise `IntegrityError`, assert a `400` response with `{"name": ["A job with this name already exists."]}`, and run backend tests to verify.”
+
+- **Frontend error UX precision**  
+  Broad prompt: “Handle frontend errors.”  
+  Refined prompt: “Assume 400 payload may contain field-level arrays; inspect `HttpError.payload.name` for duplicate-name semantics; map to a specific user-facing message; preserve generic fallback for all other failures; verify with component tests.”
+
+This approach optimized model output quality because every prompt had explicit bounds, observable success criteria, and a verification loop tied to real commands.
 
 ---
 
@@ -361,10 +384,16 @@ docker compose exec backend python -m pytest -v
 | `Pagination.test.tsx`   | Page info display, prev/next disabled states, offset calculations, zero-total handling                                                  |
 | `useJobsQuery.test.tsx` | Query hook behavior with mocked API                                                                                                     |
 
-Run them:
+Run them (containerized):
 
 ```bash
-cd frontend && npm run test
+docker compose run --rm playwright npm run test -- --run
+```
+
+Run them locally (optional):
+
+```bash
+cd frontend && npm run test -- --run
 ```
 
 ---
@@ -402,7 +431,7 @@ This section addresses the assignment's requirement to consider millions of jobs
 
 ## Time Spent
 
-Approximate total time spent: **4-5 hours total over the course of 3 days**
+Approximate total time spent: **3 hours total over the course of 3 days**
 
 This includes planning, architecture design, implementation, debugging, testing, and documentation.
 
