@@ -23,6 +23,7 @@ dist/
 .env.*
 .direnv/
 .venv/
+!.env.example
 
 # Python tooling/test artifacts
 .pytest_cache/
