@@ -5,16 +5,16 @@ interface JobListProps {
   jobs: Job[];
   onStatusChange: (jobId: number, newStatus: JobStatusType) => void;
   onDelete: (jobId: number) => void;
-  isUpdating?: boolean;
-  isDeleting?: boolean;
+  isUpdatingJobId?: number | null;
+  isDeletingJobId?: number | null;
 }
 
 export function JobList({
   jobs,
   onStatusChange,
   onDelete,
-  isUpdating = false,
-  isDeleting = false,
+  isUpdatingJobId = null,
+  isDeletingJobId = null,
 }: JobListProps) {
   if (jobs.length === 0) {
     return (
@@ -32,8 +32,8 @@ export function JobList({
           job={job}
           onStatusChange={onStatusChange}
           onDelete={onDelete}
-          isUpdating={isUpdating}
-          isDeleting={isDeleting}
+          isUpdating={isUpdatingJobId === job.id}
+          isDeleting={isDeletingJobId === job.id}
         />
       ))}
     </ul>
