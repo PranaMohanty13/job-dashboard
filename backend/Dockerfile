@@ -13,4 +13,6 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
+RUN mkdir -p /app/app/staticfiles
+
 CMD ["sh", "-c", "echo 'Backend image built. Use docker compose to run the server.' && tail -f /dev/null"]

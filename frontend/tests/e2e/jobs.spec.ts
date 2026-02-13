@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Job Dashboard E2E", () => {
-  test("create, update status, and delete a job on real backend", async ({ page }) => {
+  test("create, update status, and delete a job on real backend", async ({
+    page,
+  }) => {
     // Debug logging
-    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
-    page.on('pageerror', err => console.log(`BROWSER ERROR: ${err}`));
+    page.on("console", (msg) => console.log(`BROWSER LOG: ${msg.text()}`));
+    page.on("pageerror", (err) => console.log(`BROWSER ERROR: ${err}`));
 
     console.log("Navigating to home page...");
     await page.goto("/");
@@ -13,7 +15,7 @@ test.describe("Job Dashboard E2E", () => {
     // 1. Create a new job
     const timestamp = Date.now();
     const jobName = `E2E Job ${timestamp}`;
-    
+
     await expect(page.getByTestId("new-job-input")).toBeVisible();
     await page.getByTestId("new-job-input").fill(jobName);
     await page.getByTestId("create-job-button").click();
@@ -22,7 +24,7 @@ test.describe("Job Dashboard E2E", () => {
     // 2. Verify it appears in the list with PENDING status
     await expect(page.getByText(jobName)).toBeVisible({ timeout: 10000 });
     console.log("Job visible.");
-    
+
     // Find the row container
     const jobRow = page.locator("li", { hasText: jobName });
     await expect(jobRow).toBeVisible();
@@ -42,10 +44,13 @@ test.describe("Job Dashboard E2E", () => {
     // 5. Delete the job
     console.log("Deleting job...");
     const deleteBtn = jobRow.locator("button", { hasText: "Delete" });
+    page.once("dialog", async (dialog) => {
+      await dialog.accept();
+    });
     await deleteBtn.click();
 
     // 6. Verify job is gone
-    await expect(page.getByText(jobName)).not.toBeVisible();
+    await expect(jobRow).toHaveCount(0);
     console.log("Job deleted.");
   });
 });

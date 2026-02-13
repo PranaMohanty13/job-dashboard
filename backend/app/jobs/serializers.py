@@ -28,6 +28,7 @@ class JobListSerializer(serializers.ModelSerializer):
 
 
 class JobDetailSerializer(serializers.ModelSerializer):
+    statuses = JobStatusSerializer(many=True, read_only=True)
 
     class Meta:
         model = Job
@@ -38,6 +39,7 @@ class JobDetailSerializer(serializers.ModelSerializer):
             "current_status_timestamp",
             "created_at",
             "updated_at",
+            "statuses",
         ]
         read_only_fields = fields
 
@@ -47,10 +49,11 @@ class JobCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255, min_length=1)
 
     def validate_name(self, value: str) -> str:
-        """Strip whitespace and ensure non-empty."""
         cleaned = value.strip()
         if not cleaned:
             raise serializers.ValidationError("Job name cannot be empty or whitespace only.")
+        if Job.objects.filter(name=cleaned).exists():
+            raise serializers.ValidationError("A job with this name already exists.")
         return cleaned
 
 

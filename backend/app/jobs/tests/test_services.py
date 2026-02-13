@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError
 from jobs.enums import JobStatusType
 from jobs.models import Job, JobStatus
 from jobs.services import create_job, delete_job, update_job_status
@@ -26,6 +27,12 @@ class TestCreateJob:
 
         assert job.created_at is not None
         assert job.updated_at is not None
+
+    def test_rejects_duplicate_name(self):
+        create_job(name="Duplicate Name")
+
+        with pytest.raises(IntegrityError):
+            create_job(name="Duplicate Name")
 
 
 @pytest.mark.django_db

@@ -1,19 +1,10 @@
-import factory
+import pytest
+
 from jobs.enums import JobStatusType
-from jobs.models import Job, JobStatus
+from jobs.services import create_job
 
 
-class JobFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = Job
-
-    name = factory.Sequence(lambda n: f"Test Job {n}")
-    current_status_type = JobStatusType.PENDING
-
-
-class JobStatusFactory(factory.django.DjangoModelFactory):
-    class Meta:
-        model = JobStatus
-
-    job = factory.SubFactory(JobFactory)
-    status_type = JobStatusType.PENDING
+@pytest.fixture
+def sample_job(db):
+    """Create a job via the service layer (includes initial PENDING status)."""
+    return create_job(name="Sample Job")

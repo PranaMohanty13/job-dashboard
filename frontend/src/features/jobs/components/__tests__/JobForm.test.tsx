@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { JobForm } from "../JobForm";
 import * as jobsApi from "../../../../api/jobs";
+import { HttpError } from "../../../../api/client";
 
 vi.mock("../../../../api/jobs", () => ({
   createJob: vi.fn(),
@@ -104,6 +105,24 @@ describe("JobForm", () => {
     await waitFor(() => {
       expect(
         screen.getByText("Failed to create job. Please try again."),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows duplicate-name message when API returns duplicate validation error", async () => {
+    const user = userEvent.setup();
+    vi.mocked(jobsApi.createJob).mockRejectedValue(
+      new HttpError(400, { name: ["A job with this name already exists."] }),
+    );
+
+    renderJobForm();
+
+    await user.type(screen.getByTestId("new-job-input"), "Duplicate Job");
+    await user.click(screen.getByTestId("create-job-button"));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Duplicate name found. Please give a different name."),
       ).toBeInTheDocument();
     });
   });

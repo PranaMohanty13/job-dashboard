@@ -1,6 +1,12 @@
 import { JOB_STATUS_OPTIONS } from "../../../shared/types/job";
 import type { JobStatusType } from "../../../shared/types/job";
 
+const VALID_STATUSES = new Set<string>(JOB_STATUS_OPTIONS);
+
+function isJobStatusType(value: string): value is JobStatusType {
+  return VALID_STATUSES.has(value);
+}
+
 interface StatusSelectorProps {
   jobId: number;
   currentStatus: JobStatusType;
@@ -19,9 +25,9 @@ export function StatusSelector({
       data-testid={`status-select-${jobId}`}
       value={currentStatus}
       onChange={(e) => {
-        const newStatus = e.target.value as JobStatusType;
-        if (newStatus !== currentStatus) {
-          onStatusChange(jobId, newStatus);
+        const value = e.target.value;
+        if (isJobStatusType(value) && value !== currentStatus) {
+          onStatusChange(jobId, value);
         }
       }}
       disabled={disabled}
