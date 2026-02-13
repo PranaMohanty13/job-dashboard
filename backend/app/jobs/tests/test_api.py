@@ -1,4 +1,5 @@
 import pytest
+from django.db import IntegrityError
 from rest_framework.test import APIClient
 
 from jobs.enums import JobStatusType
@@ -87,6 +88,29 @@ class TestCreateJob:
     def test_rejects_missing_name(self, api_client: APIClient):
         resp = api_client.post("/api/jobs/", {}, format="json")
         assert resp.status_code == 400
+
+    def test_rejects_duplicate_name(self, api_client: APIClient):
+        api_client.post("/api/jobs/", {"name": "Duplicate API Name"}, format="json")
+
+        resp = api_client.post("/api/jobs/", {"name": "Duplicate API Name"}, format="json")
+
+        assert resp.status_code == 400
+        assert "already exists" in " ".join(resp.json()["name"]).lower()
+
+    def test_returns_400_when_service_raises_integrity_error(
+        self,
+        api_client: APIClient,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        def raise_integrity_error(*_args, **_kwargs):
+            raise IntegrityError("duplicate key value violates unique constraint")
+
+        monkeypatch.setattr("jobs.views.create_job", raise_integrity_error)
+
+        resp = api_client.post("/api/jobs/", {"name": "Race Condition"}, format="json")
+
+        assert resp.status_code == 400
+        assert resp.json() == {"name": ["A job with this name already exists."]}
 
 
 @pytest.mark.django_db
