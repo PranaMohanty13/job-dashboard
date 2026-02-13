@@ -2,10 +2,12 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package.json package.json
+COPY package*.json ./
 
-RUN npm install
+RUN npm ci
 
 COPY . .
 
-CMD ["sh", "-c", "npm --version && sleep infinity"]
+EXPOSE 5173
+
+CMD ["npx", "vite", "--host"]
