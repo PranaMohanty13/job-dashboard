@@ -431,7 +431,7 @@ This section addresses the assignment's requirement to consider millions of jobs
 
 ## Time Spent
 
-Approximate total time spent: **3 hours total over the course of 3 days**
+Approximate total time spent: **6 hours**
 
 This includes planning, architecture design, implementation, debugging, testing, and documentation.
 
