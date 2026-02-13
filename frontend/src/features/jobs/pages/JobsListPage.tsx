@@ -31,6 +31,11 @@ export function JobsListPage() {
   const deletingJobId = deleteJob.isPending
     ? (deleteJob.variables ?? null)
     : null;
+  const mutationErrorMessage = updateStatus.isError
+    ? "Failed to update job status. Please try again."
+    : deleteJob.isError
+      ? "Failed to delete job. Please try again."
+      : null;
 
   function handleStatusFilterChange(status: JobStatusType | "") {
     setStatusFilter(status);
@@ -70,6 +75,15 @@ export function JobsListPage() {
       {isError && (
         <p className="py-8 text-center text-sm text-red-400">
           Failed to load jobs. Please try again.
+        </p>
+      )}
+
+      {mutationErrorMessage && (
+        <p
+          data-testid="jobs-mutation-error"
+          className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+        >
+          {mutationErrorMessage}
         </p>
       )}
 

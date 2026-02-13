@@ -63,12 +63,16 @@ describe("JobList", () => {
   });
 
   it("calls onDelete with the correct job id when delete is clicked", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     const user = userEvent.setup();
     const jobs = [makeJob({ id: 42, name: "To Delete" })];
 
     const { onDelete } = renderJobList({ jobs });
 
     await user.click(screen.getByTestId("delete-job-42"));
+
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    confirmSpy.mockRestore();
 
     expect(onDelete).toHaveBeenCalledOnce();
     expect(onDelete).toHaveBeenCalledWith(42);

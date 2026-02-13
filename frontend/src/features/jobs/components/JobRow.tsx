@@ -43,7 +43,11 @@ export function JobRow({
       <button
         type="button"
         data-testid={`delete-job-${job.id}`}
-        onClick={() => onDelete(job.id)}
+        onClick={() => {
+          if (window.confirm(`Delete "${job.name}"? This cannot be undone.`)) {
+            onDelete(job.id);
+          }
+        }}
         disabled={isDeleting}
         className="rounded-md border border-red-800 bg-red-950 px-3 py-1 text-sm font-medium text-red-300 hover:bg-red-900 disabled:opacity-50"
       >

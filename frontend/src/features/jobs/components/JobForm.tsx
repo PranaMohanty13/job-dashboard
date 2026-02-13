@@ -1,5 +1,26 @@
 import { type FormEvent, useState } from "react";
 import { useCreateJob } from "../hooks/useCreateJob";
+import { HttpError } from "../../../api/client";
+
+function getCreateErrorMessage(error: unknown): string {
+  if (error instanceof HttpError && error.status === 400) {
+    const payload = error.payload;
+    if (payload && typeof payload === "object" && "name" in payload) {
+      const nameErrors = (payload as { name?: unknown }).name;
+      if (Array.isArray(nameErrors)) {
+        const combined = nameErrors
+          .filter((item): item is string => typeof item === "string")
+          .join(" ")
+          .toLowerCase();
+        if (combined.includes("already exists")) {
+          return "Duplicate name found. Please give a different name.";
+        }
+      }
+    }
+  }
+
+  return "Failed to create job. Please try again.";
+}
 
 export function JobForm() {
   const [name, setName] = useState("");
@@ -54,7 +75,7 @@ export function JobForm() {
       )}
       {createJob.isError && (
         <p className="w-full text-sm text-red-400">
-          Failed to create job. Please try again.
+          {getCreateErrorMessage(createJob.error)}
         </p>
       )}
     </form>

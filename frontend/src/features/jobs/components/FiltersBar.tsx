@@ -4,6 +4,17 @@ import {
 } from "../../../shared/types/job";
 import type { JobStatusType, JobsSortBy } from "../../../shared/types/job";
 
+const VALID_STATUSES = new Set<string>(JOB_STATUS_OPTIONS);
+const VALID_SORTS = new Set<string>(JOB_SORT_OPTIONS.map((o) => o.value));
+
+function isStatusFilter(value: string): value is JobStatusType | "" {
+  return value === "" || VALID_STATUSES.has(value);
+}
+
+function isSortOption(value: string): value is JobsSortBy {
+  return VALID_SORTS.has(value);
+}
+
 interface FiltersBarProps {
   statusFilter: JobStatusType | "";
   sortBy: JobsSortBy;
@@ -38,9 +49,12 @@ export function FiltersBar({
           id="status-filter"
           data-testid="status-filter"
           value={statusFilter}
-          onChange={(e) =>
-            onStatusFilterChange(e.target.value as JobStatusType | "")
-          }
+          onChange={(e) => {
+            const value = e.target.value;
+            if (isStatusFilter(value)) {
+              onStatusFilterChange(value);
+            }
+          }}
           className="rounded-md border border-slate-600 bg-slate-700 px-2 py-1 text-sm text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           <option value="">All</option>
@@ -64,7 +78,12 @@ export function FiltersBar({
           id="sort-select"
           data-testid="sort-select"
           value={sortBy}
-          onChange={(e) => onSortChange(e.target.value as JobsSortBy)}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (isSortOption(value)) {
+              onSortChange(value);
+            }
+          }}
           className="rounded-md border border-slate-600 bg-slate-700 px-2 py-1 text-sm text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           {JOB_SORT_OPTIONS.map((opt) => (
