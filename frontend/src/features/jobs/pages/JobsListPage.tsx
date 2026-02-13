@@ -25,6 +25,12 @@ export function JobsListPage() {
   const { data, isLoading, isError } = useJobsQuery(queryParams);
   const updateStatus = useUpdateJobStatus();
   const deleteJob = useDeleteJob();
+  const updatingJobId = updateStatus.isPending
+    ? (updateStatus.variables?.jobId ?? null)
+    : null;
+  const deletingJobId = deleteJob.isPending
+    ? (deleteJob.variables ?? null)
+    : null;
 
   function handleStatusFilterChange(status: JobStatusType | "") {
     setStatusFilter(status);
@@ -73,8 +79,8 @@ export function JobsListPage() {
             jobs={data.results}
             onStatusChange={handleStatusChange}
             onDelete={handleDelete}
-            isUpdating={updateStatus.isPending}
-            isDeleting={deleteJob.isPending}
+            isUpdatingJobId={updatingJobId}
+            isDeletingJobId={deletingJobId}
           />
           <Pagination
             offset={offset}

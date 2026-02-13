@@ -1,149 +1,51 @@
 import { expect, test } from "@playwright/test";
 
-type JobStatusType = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
+test.describe("Job Dashboard E2E", () => {
+  test("create, update status, and delete a job on real backend", async ({ page }) => {
+    // Debug logging
+    page.on('console', msg => console.log(`BROWSER LOG: ${msg.text()}`));
+    page.on('pageerror', err => console.log(`BROWSER ERROR: ${err}`));
 
-interface JobRecord {
-  id: number;
-  name: string;
-  current_status_type: JobStatusType;
-  current_status_timestamp: string;
-  created_at: string;
-  updated_at: string;
-}
+    console.log("Navigating to home page...");
+    await page.goto("/");
+    console.log("Navigation complete. Checking for input...");
 
-test("create, update status, and delete a job", async ({ page }) => {
-  const now = new Date().toISOString();
-  let nextId = 2;
-  let createdJobId: number | null = null;
+    // 1. Create a new job
+    const timestamp = Date.now();
+    const jobName = `E2E Job ${timestamp}`;
+    
+    await expect(page.getByTestId("new-job-input")).toBeVisible();
+    await page.getByTestId("new-job-input").fill(jobName);
+    await page.getByTestId("create-job-button").click();
+    console.log(`Created job: ${jobName}. Waiting for visibility...`);
 
-  const jobs: JobRecord[] = [
-    {
-      id: 1,
-      name: "Seed Job",
-      current_status_type: "PENDING",
-      current_status_timestamp: now,
-      created_at: now,
-      updated_at: now,
-    },
-  ];
+    // 2. Verify it appears in the list with PENDING status
+    await expect(page.getByText(jobName)).toBeVisible({ timeout: 10000 });
+    console.log("Job visible.");
+    
+    // Find the row container
+    const jobRow = page.locator("li", { hasText: jobName });
+    await expect(jobRow).toBeVisible();
+    await expect(jobRow).toContainText("PENDING");
 
-  await page.route("**/api/jobs/**", async (route) => {
-    const request = route.request();
-    const method = request.method();
-    const url = new URL(request.url());
-    const pathname = url.pathname;
+    // 3. Update status to RUNNING
+    console.log("Updating status to RUNNING...");
+    const statusSelect = jobRow.locator("select");
+    await statusSelect.selectOption("RUNNING");
+    await expect(jobRow).toContainText("RUNNING");
 
-    if (method === "GET" && pathname === "/api/jobs/") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          count: jobs.length,
-          next: null,
-          previous: null,
-          results: jobs,
-        }),
-      });
-      return;
-    }
+    // 4. Update status to COMPLETED
+    console.log("Updating status to COMPLETED...");
+    await statusSelect.selectOption("COMPLETED");
+    await expect(jobRow).toContainText("COMPLETED");
 
-    if (method === "POST" && pathname === "/api/jobs/") {
-      const payload = request.postDataJSON() as { name: string };
-      const timestamp = new Date().toISOString();
-      const newJob: JobRecord = {
-        id: nextId++,
-        name: payload.name,
-        current_status_type: "PENDING",
-        current_status_timestamp: timestamp,
-        created_at: timestamp,
-        updated_at: timestamp,
-      };
-      createdJobId = newJob.id;
-      jobs.unshift(newJob);
+    // 5. Delete the job
+    console.log("Deleting job...");
+    const deleteBtn = jobRow.locator("button", { hasText: "Delete" });
+    await deleteBtn.click();
 
-      await route.fulfill({
-        status: 201,
-        contentType: "application/json",
-        body: JSON.stringify(newJob),
-      });
-      return;
-    }
-
-    const detailMatch = pathname.match(/^\/api\/jobs\/(\d+)\/$/);
-
-    if (detailMatch && method === "PATCH") {
-      const jobId = Number(detailMatch[1]);
-      const payload = request.postDataJSON() as { status_type: JobStatusType };
-      const job = jobs.find((item) => item.id === jobId);
-
-      if (!job) {
-        await route.fulfill({
-          status: 404,
-          body: JSON.stringify({ detail: "Job not found." }),
-        });
-        return;
-      }
-
-      const timestamp = new Date().toISOString();
-      job.current_status_type = payload.status_type;
-      job.current_status_timestamp = timestamp;
-      job.updated_at = timestamp;
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(job),
-      });
-      return;
-    }
-
-    if (detailMatch && method === "DELETE") {
-      const jobId = Number(detailMatch[1]);
-      const index = jobs.findIndex((item) => item.id === jobId);
-      if (index >= 0) {
-        jobs.splice(index, 1);
-      }
-
-      await route.fulfill({ status: 204, body: "" });
-      return;
-    }
-
-    if (method === "GET" && pathname.match(/^\/api\/jobs\/\d+\/statuses\/$/)) {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          count: 0,
-          next: null,
-          previous: null,
-          results: [],
-        }),
-      });
-      return;
-    }
-
-    await route.fulfill({ status: 500, body: "Unhandled mock route" });
+    // 6. Verify job is gone
+    await expect(page.getByText(jobName)).not.toBeVisible();
+    console.log("Job deleted.");
   });
-
-  await page.goto("/");
-
-  await expect(page.getByTestId("new-job-input")).toBeVisible();
-  await page.getByTestId("new-job-input").fill("E2E Job");
-  await page.getByTestId("create-job-button").click();
-
-  await expect(page.getByText("E2E Job")).toBeVisible();
-
-  if (createdJobId === null) {
-    throw new Error("Expected createdJobId to be set after creating a job");
-  }
-
-  const newJobId: number = createdJobId;
-
-  await page.getByTestId(`status-select-${newJobId}`).selectOption("COMPLETED");
-  await expect(page.getByTestId(`job-row-${newJobId}`)).toContainText(
-    "COMPLETED",
-  );
-
-  await page.getByTestId(`delete-job-${newJobId}`).click();
-  await expect(page.getByTestId(`job-row-${newJobId}`)).toHaveCount(0);
 });
