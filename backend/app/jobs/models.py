@@ -4,7 +4,7 @@ from jobs.enums import JobStatusType
 
 class Job(models.Model):
 
-    name = models.CharField(max_length=255, db_index=True)
+    name = models.CharField(max_length=255, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
