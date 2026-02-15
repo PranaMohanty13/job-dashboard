@@ -17,7 +17,6 @@ test:
 	done
 	@echo "Running E2E tests..."
 	$(COMPOSE) run --rm playwright
-	$(COMPOSE) down -v --remove-orphans
 
 stop:
 	$(COMPOSE) down
