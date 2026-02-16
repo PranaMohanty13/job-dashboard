@@ -28,7 +28,6 @@ class JobListSerializer(serializers.ModelSerializer):
 
 
 class JobDetailSerializer(serializers.ModelSerializer):
-    statuses = JobStatusSerializer(many=True, read_only=True)
 
     class Meta:
         model = Job
@@ -39,7 +38,6 @@ class JobDetailSerializer(serializers.ModelSerializer):
             "current_status_timestamp",
             "created_at",
             "updated_at",
-            "statuses",
         ]
         read_only_fields = fields
 

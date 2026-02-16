@@ -296,7 +296,7 @@ Returns 201 with the created job. Automatically creates an initial `PENDING` sta
 GET /api/jobs/<id>/
 ```
 
-Returns job with full metadata and embedded status history.
+Returns job metadata and current status. Full status history is available via the paginated `GET /api/jobs/<id>/statuses/` endpoint.
 
 ### Update job status
 
