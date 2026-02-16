@@ -1,11 +1,3 @@
-/**
- * API request/response contracts.
- *
- * Domain types (Job, JobStatus, etc.) live in `shared/types/job.ts`.
- * This file re-exports them for convenience and defines API-specific
- * request shapes that are not relevant to the UI layer.
- */
-
 export type {
   Job as JobDto,
   JobStatus as JobStatusDto,

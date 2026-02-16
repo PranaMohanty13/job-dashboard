@@ -1,18 +1,27 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS test
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
-COPY requirements-dev.txt requirements-dev.txt
-
+COPY requirements.txt requirements-dev.txt ./
 RUN pip install --upgrade pip \
     && pip install -r requirements-dev.txt
 
 COPY . .
-
 RUN mkdir -p /app/app/staticfiles
 
-CMD ["sh", "-c", "echo 'Backend image built. Use docker compose to run the server.' && tail -f /dev/null"]
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
+
+COPY . .
+RUN mkdir -p /app/app/staticfiles
