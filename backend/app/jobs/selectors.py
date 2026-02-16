@@ -13,11 +13,6 @@ def get_jobs_list(
     status: Optional[str] = None,
     sort: str = "-created_at",
 ) -> QuerySet[Job]:
-    """Return a filtered and sorted queryset of jobs.
-
-    Raises:
-        ValueError: If *status* or *sort* is not a recognised value.
-    """
     qs = Job.objects.all()
 
     if status is not None:
