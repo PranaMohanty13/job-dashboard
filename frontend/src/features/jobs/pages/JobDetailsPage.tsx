@@ -16,6 +16,17 @@ export function JobDetailsPage() {
 
   const [historyOffset, setHistoryOffset] = useState(0);
 
+  if (!jobId || !Number.isFinite(id) || id <= 0) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <p className="text-sm text-red-400">Invalid job ID.</p>
+        <Link to="/" className="text-sm text-blue-400 hover:underline">
+          ← Back to dashboard
+        </Link>
+      </div>
+    );
+  }
+
   const {
     data: job,
     isLoading: jobLoading,
